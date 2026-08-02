@@ -125,10 +125,11 @@ def demo():
         created = create_ticket(db, payload)
         replayed = create_ticket(db, payload)
         assert created["ticket_id"] == replayed["ticket_id"]
+        changed_intent_rejected = False
         try:
             create_ticket(db, {**payload, "title": "Delete search index"})
         except IntentConflict:
-            pass
+            changed_intent_rejected = True
         else:
             raise AssertionError("changed intent was accepted")
         lost = {**payload, "idempotency_key": "run-43:create-ticket"}
@@ -143,11 +144,31 @@ def demo():
                 "       (SELECT count(*) FROM tickets)"
             ).fetchone()
         assert counts == (2, 2)
-        print({"created": created, "recovered": recovered, "counts": counts})
+        checks = {
+            "equivalent_retry_replayed_original_result": (
+                created["ticket_id"] == replayed["ticket_id"]
+            ),
+            "changed_intent_failed_closed": changed_intent_rejected,
+            "lost_after_commit_recovered_by_replay": (
+                recovered["disposition"] == "replayed"
+            ),
+            "one_side_effect_per_logical_operation": counts == (2, 2),
+        }
+        report = {
+            "verdict": "passed" if all(checks.values()) else "failed",
+            "checks": checks,
+            "operation_rows": counts[0],
+            "ticket_rows": counts[1],
+            "conclusion": (
+                "Equivalent and ambiguous retries produced one durable side effect "
+                "per logical operation; changed intent failed closed."
+            ),
+        }
+        print(json.dumps(report, indent=2))
+        return report
     finally:
         db.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
     demo()
-
