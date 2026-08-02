@@ -17,7 +17,30 @@ python3 -m unittest -v test_lab.py
 python3 tool_lab.py
 ```
 
-Expected test result: one passing integration test. The demo prints two operations and two tickets. The first request is created; its equivalent retry is replayed. A second request synthetically loses the response after commit, then recovers the already committed result on retry.
+Expected test result: two passing integration tests. The demo ends with this decision record:
+
+```json
+{
+  "verdict": "passed",
+  "checks": {
+    "equivalent_retry_replayed_original_result": true,
+    "changed_intent_failed_closed": true,
+    "lost_after_commit_recovered_by_replay": true,
+    "one_side_effect_per_logical_operation": true
+  },
+  "operation_rows": 2,
+  "ticket_rows": 2,
+  "conclusion": "Equivalent and ambiguous retries produced one durable side effect per logical operation; changed intent failed closed."
+}
+```
+
+## Conclusion supported
+
+For the executed SQLite transaction boundary, equivalent and ambiguous retries replay one durable result, changed intent fails closed, and two logical operations produce exactly two tickets.
+
+## Conclusion not supported
+
+This lab does not prove distributed coordination across databases, regions, or independently committed downstream services. Those systems must preserve the same key-to-intent binding and atomic-result invariant with their own transaction protocol.
 
 ## Mental model
 
@@ -67,4 +90,3 @@ The demo and test use temporary databases and remove them automatically. If adap
 ## Related article
 
 This repository is the repeatable evidence artifact for “Make Agent Tool Retries Safe With Typed Contracts and Idempotency.”
-
