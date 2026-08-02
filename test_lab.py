@@ -3,10 +3,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tool_lab import IntentConflict, LostAfterCommit, create_ticket, initialize
+from tool_lab import IntentConflict, LostAfterCommit, create_ticket, demo, initialize
 
 
 class ToolBoundaryIntegrationTest(unittest.TestCase):
+    def test_demo_states_the_retry_conclusion(self):
+        report = demo()
+        self.assertEqual(report["verdict"], "passed")
+        self.assertTrue(all(report["checks"].values()))
+        self.assertIn("one durable side effect", report["conclusion"])
+
     def test_retries_replay_one_durable_side_effect_and_changed_intent_fails(self):
         with tempfile.TemporaryDirectory() as directory:
             db = Path(directory) / "lab.db"
